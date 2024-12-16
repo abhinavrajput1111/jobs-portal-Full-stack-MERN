@@ -1,6 +1,6 @@
 import mongoose from "mongoose";
 import jobsModel from "../Models/jobsModel.js";
-
+import moment from "moment";
 
 const tot = [
     {
@@ -700,18 +700,96 @@ export const createJobs = async (req,res,next)=>{
 
 export const getAllJobs = async(req,res,next)=>{
 
+// abhi backend me humare pas ["pending", "interview", "reject"] hai,
+// leking frontend me hume "all" bhi rakhna padega ek select ka option taki hum saari unfiltered jobs bhi dekh ske.
+
+    // front end pr hum enum me ek aur option rakhenge ALL jobs ka, taki
+        // user all select krke saari jobs ko dekh ske agar use filters nahi lagane to.
+        // Wo bas front end pr rhega
+
     try{
         // const jobs = await jobsModel.find();
 
         // to get jobs posted by login user
-        const jobs = await jobsModel.find({createdBy: req.user.userId});
+        // const jobs = await jobsModel.find({createdBy: req.user.userId});
+
+// Hum ek query object banayenge, jisme log in user ki id to authMiddleware se milegi hi, aur usme conditionally
+// status ki key dalenge agar hume query me koi key value pairs milte hain, fir usi ke hisab se hum jobsModel se find krke results dikhayenge.
+
+      const {status, workType, search, sort} = req.query;
+
+      const queryObject = {
+        createdBy : req.user.userId
+      }
+
+// ab humare pas queryObject me already log in user ki id hai, 
+// aur job database me humare pas keys hain jisme humne ye createdBy key dali hui hai jisme
+// humne job add krne wale user ki id dali hai,
+
+// ab hum user ki condition check krenge filter krne ke liye aur agar hume koi query 
+// milti hai ["pending", "reject", "interview"] ya front end se "all" me se to hum 
+// status nam ki key aur status jo bhi mila hia uski value ko add kr denge queryObject me.
+
+      if(status && status !== "all"){
+        queryObject.status = status;
+      }
+
+      if(workType && workType !== "all"){
+        queryObject.workType = workType
+      }
+
+      // agar tumhe kisi input ya value me regex lagana ho 
+      // to hum mongoose ka $regex method use kr skte hain, aur agar
+      //  regex use krte krte tumhe usko case insensitive bhi banana
+      //  hai to $options: "i" lagana hota hai,lekin wo regex wala ek object 
+      // hota hai
+    
+      if(search){
+        queryObject.position = {$regex: search, $options: "i"};
+      }
+
+// ab hum jobsModel yani jobs wale collection me search krenge ki koi jobs hain kya
+// jo query object yani {createdBy: "", status: "pending"} for ex se match hoti hai, agar hoti ha
+// to usko return kr denge aur frontend me show kr denge.
+ 
+
+// agar koi bhi query key value pairs nahi aaye hain, to fir seedhe queryObject
+// me {createdBy: "login user id aa jayegi"}, aur all jobs find ho jayengi jo login user ne add ki hain.
+
+// agar hum multiple queries bhi denge to bhi filtering acche se kam hogi, qki har filter ki condition add krne ke bad
+// hum usko queryObject me add krakr find krwa rhe hain jobsModel se.
+
+let queryResult = await jobsModel.find(queryObject);
+
+if(sort === "latest"){
+  queryResult = queryResult.sort("-createdAt");
+}
+
+if(sort === "oldest"){
+  queryResult = queryResult.sort("createdAt");
+}
+
+if(sort == "a-z"){
+  queryResult = queryResult.sort("position");
+}
+
+if(sort == "z-a"){
+  queryResult = queryResult.sort("-position");
+}
+
+const jobs = await queryResult;
+
 
         res.status(200).json({
             status: 200,
             message:"Jobs fetched Successfully!!",
+            totalJobs: jobs.length,
             jobs,
+
             user: req.user
-        })
+
+        },
+)
 
 }
 catch(error){
@@ -728,6 +806,7 @@ export const jobsStatsController = async(req,res)=>{
   const stats = await jobsModel.aggregate([
    
     // Search by user jobs
+
     // note: hum jab bhi login krenge, to authMiddleware token me se ek user id nikalkr
     // req ke andr ek user object banayega aur us object me userID key se wo object ki ID ko 
     // save kr dega, ab jab bhi auth middleware shi se kaam krega to req ke pas hamesha login krne wale user
@@ -743,12 +822,61 @@ export const jobsStatsController = async(req,res)=>{
         createdBy: new mongoose.Types.ObjectId(req.user.userId),
       },
     },
+    {
+      $group : {
+        _id : "$status",
+        count: {$sum:1},
+      },
+    }
   ])
 
   // Sending Stats as Json response
 
+  // ( Not compulsory ) test if we are trying to get a reponse from a user
+  // that has not created any job, taaki usko response me empty stats object na mile,
+// usko defaultStats naam ka ek object mile, but it is not working fine.
+ 
+  const defaultStats = {
+    pending: stats.pending || 0,
+    interview : stats.interview || 0,
+    reject : stats.reject || 0
+  }
+
+  let monthlyApplications = await jobsModel.aggregate([
+    {
+      $match:{
+        createdBy : new mongoose.Types.ObjectId(req.user.userId)
+      },
+     
+      },
+      {
+        $group:{
+            _id : {
+              year:{
+                $year: "$createdAt"
+              },
+              month: {
+                $month: "$createdAt",
+              }
+            },
+            count:{
+              $sum: 1
+            }
+        },
+    }
+  ])
+
+  monthlyApplications = monthlyApplications.map((item)=>{
+    const {_id:{year, month}, count} = item;
+    const date = moment().year(year).month(month-1).format("MMM Y");
+    return {date, count}
+  }).reverse()
+
+
   res.status(200).json({
     "totalJobs": stats.length,
-    stats
+    stats,
+    monthlyApplications,
+    defaultStats,
   })
 }

@@ -13,6 +13,9 @@ const jobSchema = new mongoose.Schema({
     status: {
         type: String,
         enum: ["pending","reject","interview"],
+        // front end pr hum enum me ek aur option rakhenge ALL jobs ka, taki
+        // user all select krke saari jobs ko dekh ske agar use filters nahi lagane to.
+        // Wo bas front end pr rhega
         default: "pending"
     },
     workType:{
