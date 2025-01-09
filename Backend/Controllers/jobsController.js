@@ -716,7 +716,7 @@ export const getAllJobs = async(req,res,next)=>{
 // Hum ek query object banayenge, jisme log in user ki id to authMiddleware se milegi hi, aur usme conditionally
 // status ki key dalenge agar hume query me koi key value pairs milte hain, fir usi ke hisab se hum jobsModel se find krke results dikhayenge.
 
-      const {status, workType, search, sort} = req.query;
+      const {status, workType, search, sort, pageNo, limitNo} = req.query;
 
       const queryObject = {
         createdBy : req.user.userId
@@ -730,6 +730,7 @@ export const getAllJobs = async(req,res,next)=>{
 // milti hai ["pending", "reject", "interview"] ya front end se "all" me se to hum 
 // status nam ki key aur status jo bhi mila hia uski value ko add kr denge queryObject me.
 
+// Logic filter
       if(status && status !== "all"){
         queryObject.status = status;
       }
@@ -759,7 +760,32 @@ export const getAllJobs = async(req,res,next)=>{
 // agar hum multiple queries bhi denge to bhi filtering acche se kam hogi, qki har filter ki condition add krne ke bad
 // hum usko queryObject me add krakr find krwa rhe hain jobsModel se.
 
-let queryResult = await jobsModel.find(queryObject);
+// Instance of Job which we have find out and ab hum isme sorting wagera krenge. Agar zrut padegi to.
+
+let queryResult = jobsModel.find(queryObject);
+
+// yha par humne await isliye nahi lagaya hai qki ho skta hai hume data ko
+// sort krna pade to doccument ki array ke instance ko hi sort krenge aur
+// aur result ko await krke frontend ya response pr bhej denge.
+
+
+
+// ab hum sort nam ka variable lenge query params me aur uski value ke hisab
+// se manipulate krenge results ko.
+// Mongoose me sort method hota hai, usme column dalna hota hai kis collection ke doccument ke kis field
+// ke hisab se sort krna hai, Assending ke liye "-fieldName" aur descending ke liye
+// normal rakhna hota hai.
+
+// jse sort == "latest hua to hum sort me "-createdAt" field ko select kiye aur - minus 
+// isliye lagaye taki hum createdAt field me latest ke hisab se sort kr ske.
+
+// humne sort me condition likha hai sort == "a-z" or "z-a" isme hum "Position"
+// field ko target kr rhe hain sorting ke liye.
+// /
+
+// ab hume agar sorting krni hai to sort krenge
+
+// SORTING LOGIC
 
 if(sort === "latest"){
   queryResult = queryResult.sort("-createdAt");
@@ -777,15 +803,27 @@ if(sort == "z-a"){
   queryResult = queryResult.sort("-position");
 }
 
-const jobs = await queryResult;
+// Paging Logic (Pagination)
 
+let page = Number(req.query.pageNo) || 1;
+let limit = Number(req.query.limitNo) || 10;
+const skip = (page - 1) * limit;
+
+queryResult = queryResult.skip(skip).limit(limit);
+
+// jobs count
+const totalJobs = await jobsModel.countDocuments(queryResult);
+const numberOfPage = Math.ceil(totalJobs/limit);
+
+const jobs = await queryResult;
+ 
 
         res.status(200).json({
             status: 200,
             message:"Jobs fetched Successfully!!",
-            totalJobs: jobs.length,
+            totalJobs: totalJobs,
             jobs,
-
+            numberOfPage,
             user: req.user
 
         },
@@ -798,6 +836,7 @@ catch(error){
 }
 
 
+// ---------------------------------------------------
 
 // Jobs Stats controller to check jobs
 
@@ -849,7 +888,7 @@ export const jobsStatsController = async(req,res)=>{
       },
      
       },
-      {
+      { 
         $group:{
             _id : {
               year:{
