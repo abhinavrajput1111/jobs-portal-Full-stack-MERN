@@ -3,8 +3,7 @@ import userModel from "../Models/userModel.js"
 
 
 export const registerUser = async (req,res, next)=>{
-    const {name, email, password} = req.body;
-
+    const {name, email, password, lastName} = req.body;
 
     if (!name) {
       return next({ status: 400, message: "Name is required" });
@@ -28,8 +27,7 @@ export const registerUser = async (req,res, next)=>{
         return res.status(409).send({message:"Email already exists, Kindly try with another Email", success: false})
     }
 
-
-    const createUserDoccument = await userModel.create({name, email, password});
+    const createUserDoccument = await userModel.create({name, email, password, lastName});
     const token = createUserDoccument.createJWT();
 
 

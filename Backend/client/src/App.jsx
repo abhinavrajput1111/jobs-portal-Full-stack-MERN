@@ -5,11 +5,16 @@ import Login from './pages/Login'
 import Register from './pages/Register'
 import Notfound from './pages/Notfound'
 import Dashboard from './pages/Dashboard'
+import Header from './assets/components/Header'
 
 function App() {
 
   return (
     <>
+    <Header/>
+    <br/>
+    <br/>
+    <br/>
 <Routes>
 <Route path='/' element={<Homepage/>} />
 <Route path='/login' element={<Login/>} />

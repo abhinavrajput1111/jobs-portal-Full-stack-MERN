@@ -28,10 +28,10 @@ const Header = () => {
 
  <div className="w-[30%] h-auto px-2 py-1 flex justify-between items-center">
 
-    <Link to="/" element={<Homepage/>} className="font-roboto hover:text-green-600 hover:text-md hover:font-semibold"> Home </Link>
-    <Link to="/jobs" element={<Jobs/>} className="font-roboto hover:text-green-600 hover:text-md hover:font-semibold"> Jobs </Link>
-    <Link to="/blog" element={<Blog/>} className="font-roboto hover:text-green-600 hover:text-md hover:font-semibold"> Blog </Link>
-    <Link to="/ContactUs" element={<ContactUs/>} className="font-roboto hover:text-green-600 hover:text-md hover:font-semibold"> Contact Us! </Link>
+    <Link to="/"  className="font-roboto hover:text-green-600 hover:text-md hover:font-semibold"> Home </Link>
+    <Link to="/jobs"  className="font-roboto hover:text-green-600 hover:text-md hover:font-semibold"> Jobs </Link>
+    <Link to="/blog"  className="font-roboto hover:text-green-600 hover:text-md hover:font-semibold"> Blog </Link>
+    <Link to="/ContactUs"  className="font-roboto hover:text-green-600 hover:text-md hover:font-semibold"> Contact Us! </Link>
 
  </div>
 
@@ -39,10 +39,10 @@ const Header = () => {
 
 <div className="px-4 py-2">
 
-    <Link to="/register" element={<Register/>} className="px-3 py-1 
+    <Link to="/register" className="px-3 py-1 
     bg-blue-600 text-white rounded-lg hover:bg-blue-800 hover:font-semibold mx-2"> Register </Link>
 
-    <Link to="/login" element={<Login/>} className="px-5 py-1 
+    <Link to="/login" className="px-5 py-1 
         bg-green-600 rounded-lg text-white hover:bg-green-800 hover:font-semibold mx-2"> Login </Link>
     </div>
 
